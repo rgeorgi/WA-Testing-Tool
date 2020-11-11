@@ -8,6 +8,7 @@ setup(
         'scripts/wa_testing_tool',
         'scripts/download_intents'
     ],
+    packages=['watson_testing_tool'],
     install_requires=[
         'numpy>=1.13.3',
         'pandas>=0.21',

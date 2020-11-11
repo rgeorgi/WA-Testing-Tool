@@ -11,7 +11,7 @@ from configparser import ConfigParser, SectionProxy
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, BearerTokenAuthenticator, Authenticator
 from ibm_watson.assistant_v1 import MessageInput
 
-from utils import BASE_URL, DEFAULT_WA_VERSION, WA_API_VERSION_ITEM, WCS_BASEURL_ITEM, WCS_AUTH_TYPE_ITEM, WCS_IAM_APIKEY_ITEM
+from watson_testing_tool import BASE_URL, DEFAULT_WA_VERSION, WA_API_VERSION_ITEM, WCS_BASEURL_ITEM, WCS_AUTH_TYPE_ITEM, WCS_IAM_APIKEY_ITEM
 
 import pandas
 
