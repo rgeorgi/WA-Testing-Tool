@@ -20,8 +20,17 @@ a [precision curve](precision_curve.md), in addition to per-intent precision and
 
 ## Quick Start
 Pre-work: Make sure to cd into the location of a projects folder, where you will clone this github repo.  Within the folder, cd into the WA-Testing-Tool folder. 
-1. Install code  `git clone https://github.com/cognitive-catalyst/WA-Testing-Tool.git`
-2. Install dependencies `pip3 install --upgrade -r requirements.txt`
+1. Acquire code  `git clone https://github.com/cognitive-catalyst/WA-Testing-Tool.git`
+
+2. Install package:
+
+   `````bash
+   cd WA-Testing-Tool
+   python3 -m venv venv
+   source ./venv/bin/activate
+   pip3 install -e .
+   `````
+
 3. Set up parameters properly in configuration file (ex: `config.ini`). Use `config.ini.sample` to bootstrap your configuration.
   a. In your terminal, copy the config file into a new one, `cp config.ini.sample config.ini`
   b. Open the config.ini file in your favorite text editor, edit and save the following information with your actual credentials: 
@@ -29,7 +38,18 @@ Pre-work: Make sure to cd into the location of a projects folder, where you will
       url
       workspace_id
   c. Set the mode and the mode-specific parameters.
-4. Run the process. `python3 run.py -c config.ini` or `python3 run.py -c <path to your config file>`
+
+4. Run the testing tool:
+
+   ```bash
+   wa_testing_tool
+   ```
+
+   or
+
+   ```bash
+   wa_testing_tool -c <path_to_your_config_file>
+   ```
 
 ## Quick Update
 If you have already installed this utility use these steps to get the latest code.
@@ -58,8 +78,16 @@ For standard test, the input must only have one column or error will be thrown:
 | utterance 1          |
 | utterance 2          |
 
+## Download Intents
+
+If you want to download the current intents from a WA instance, make sure that the `config.ini` is set up correctly, including the `workspace_id` and use the `download_intents` script:
+
+```bash
+download_intents -c config.ini --csv ./data/intents-downloaded.csv
+```
 
 ## Examples
+
 There are a variety of ways to use this tool.  Primarily you will execute a k-folds, blind, or standard test.
 ### Core execution modes
 [Run k-fold cross-validation](examples/kfold.md)
