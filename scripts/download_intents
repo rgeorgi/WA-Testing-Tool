@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""
+
+"""
+from typing import Tuple, List, Dict
+
+from ibm_watson import AssistantV1, NaturalLanguageClassifierV1
+
+from argparse import ArgumentParser
+from configparser import ConfigParser, SectionProxy
+from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, BearerTokenAuthenticator, Authenticator
+from ibm_watson.assistant_v1 import MessageInput
+
+from utils import BASE_URL, DEFAULT_WA_VERSION, WA_API_VERSION_ITEM, WCS_BASEURL_ITEM, WCS_AUTH_TYPE_ITEM, WCS_IAM_APIKEY_ITEM
+
+import pandas
+
+def get_credentials(c: ConfigParser) -> Tuple[str, str, Authenticator]:
+    credentials = c['ASSISTANT CREDENTIALS']
+
+    # Get the apikey
+    apikey = credentials.get(WCS_IAM_APIKEY_ITEM)
+
+    # Get the auth_type
+    auth_type = credentials.get(WCS_AUTH_TYPE_ITEM, 'iam')
+    if auth_type == 'bearer':
+        authenticator = BearerTokenAuthenticator(apikey)
+    else:
+        authenticator = IAMAuthenticator(apikey)
+
+    # Get the URL
+    url = credentials.get(WCS_BASEURL_ITEM, BASE_URL)
+
+    # Get the version
+    version = credentials.get(WA_API_VERSION_ITEM, DEFAULT_WA_VERSION)
+
+    return version, url, authenticator
+
+
+def init_assistant(config: ConfigParser) -> AssistantV1:
+    """
+    Initialize the Watson Assistant, based on the
+    provider config.
+
+    :param config:
+    :return:
+    """
+    version, url, authenticator = get_credentials(config)
+    assistant =  AssistantV1(
+        version=version, authenticator=authenticator
+    )
+    assistant.set_service_url(url)
+    return assistant
+
+def init_nlc(config: ConfigParser) -> NaturalLanguageClassifierV1:
+    version, url, authenticator = get_credentials(config)
+    nlc = NaturalLanguageClassifierV1(
+        authenticator=authenticator
+    )
+    return nlc
+
+def get_workspace_id(config: ConfigParser) -> str:
+    return config.get(c.default_section, 'workspace_id')
+
+def load_config(filename: str):
+    c = ConfigParser()
+    with open(filename, 'r') as f:
+        c.read_file(f)
+    return c
+
+def get_intents(assistant: AssistantV1, workspace_id: str) -> pandas.DataFrame:
+    intents = {}
+    intent_response = assistant.list_intents(workspace_id, export=True).get_result().get('intents')
+    for intent_dict in intent_response:
+        intents[intent_dict['intent']] = [example_dict['text'] for example_dict in intent_dict['examples']]
+    return intents_to_df(intents)
+
+def intents_to_df(intents: Dict[str, List[str]]) -> pandas.DataFrame:
+    matrix = [[example, key] for key, examples in intents.items() for example in examples]
+    df = pandas.DataFrame(data=matrix, columns=['utterance', 'golden intent'])
+    return df
+
+def check_utterance(assistant: AssistantV1,
+                    workspace_id: str,
+                    utterance: str):
+    """
+    Send an utterance to the assistant, and get back the
+    intent it was classified as.
+    """
+    response = assistant.message(
+        workspace_id,
+        input=MessageInput(text=utterance)
+    ).get_result()
+    intents = [(intent_dict['intent'], intent_dict['confidence']) for intent_dict in response.get('intents', [])]
+    return intents
+
+def test_intents(assistant: AssistantV1,
+                 workspace_id: str,
+                 intents: pandas.DataFrame):
+
+    matches = 0
+    compares = 0
+
+    for row_index, row in intents.iterrows():
+        utterance, golden_intent = row.values
+        # Send to the assistant and get back the result.
+        test_intents = check_utterance(assistant, workspace_id, utterance)
+        if test_intents[0][0] == golden_intent:
+            matches += 1
+        else:
+            print(f'FAIL: {str(test_intents)}, expected {golden_intent}')
+        compares += 1
+        print(f'Current accuracy: {matches/compares if compares != 0 else 0}')
+
+
+if __name__ == '__main__':
+    p = ArgumentParser()
+    p.add_argument('-c', '--config', default='config.ini')
+    p.add_argument('--csv', help='output to csv', required=True)
+
+    args = p.parse_args()
+
+    c = load_config(args.config)
+    assistant = init_assistant(c)
+    workspace_id = get_workspace_id(c)
+    intents = get_intents(assistant, workspace_id)
+    intents.to_csv(args.csv, header=True, index=False)
+
+    # test_intents(assistant, workspace_id, intents)
+    # print(assistant.message(workspace_id, input=MessageInput(text='what should I say I want to say I love you')).get_result().get('intents'))
